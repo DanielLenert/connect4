@@ -5,7 +5,6 @@ import tty
 import termios
 
 SERVO_PIN = 17
-STOP = 6.95  # etwas unter 7.5 probieren
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(SERVO_PIN, GPIO.OUT)
@@ -13,13 +12,12 @@ GPIO.setup(SERVO_PIN, GPIO.OUT)
 pwm = GPIO.PWM(SERVO_PIN, 50)
 pwm.start(0)
 
-def set_continuous(speed):
-    # speed: -1.0 = volle Kraft links, 0 = stop, 1.0 = volle Kraft rechts
-    if speed == 0:
-        duty = STOP
-    else:
-        duty = 7.5 + (speed * 2.5)
+def set_angle(angle):
+    duty = 2 + (angle / 18)
     pwm.ChangeDutyCycle(duty)
+    time.sleep(0.3)
+    pwm.ChangeDutyCycle(0)
+    return angle
 
 def get_key():
     fd = sys.stdin.fileno()
@@ -31,34 +29,33 @@ def get_key():
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 print("Steuerung:")
-print("  a = links")
-print("  d = rechts")
+print("  a = links (-20)")
+print("  d = rechts (+20)")
 print("  s = Spielzug-Sequenz")
 print("  q = beenden")
+
+current_angle = 90
+set_angle(current_angle)
 
 try:
     while True:
         key = get_key()
 
         if key == 'a':
-            set_continuous(-1.0)
-            time.sleep(0.3)
-            set_continuous(0)
+            current_angle -= 20
+            current_angle = set_angle(current_angle)
+            print(f"Winkel: {current_angle}°")
 
         elif key == 'd':
-            set_continuous(1.0)
-            time.sleep(0.3)
-            set_continuous(0)
+            current_angle += 20
+            current_angle = set_angle(current_angle)
+            print(f"Winkel: {current_angle}°")
 
         elif key == 's':
             print("Spielzug...")
-            set_continuous(1.0)
+            set_angle(0)
             time.sleep(0.5)
-            set_continuous(0)
-            time.sleep(0.3)
-            set_continuous(-1.0)
-            time.sleep(0.5)
-            set_continuous(0)
+            set_angle(90)
             print("Fertig")
 
         elif key == 'q':
