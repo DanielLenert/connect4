@@ -34,7 +34,7 @@ print("  d = rechts (+20)")
 print("  s = Spielzug-Sequenz")
 print("  q = beenden")
 
-current_angle = 90
+current_angle = 120
 set_angle(current_angle)
 
 try:
@@ -55,7 +55,7 @@ try:
             print("Spielzug...")
             set_angle(0)
             time.sleep(0.5)
-            set_angle(90)
+            set_angle(120)
             print("Fertig")
 
         elif key == 'q':
@@ -64,3 +64,5 @@ try:
 finally:
     pwm.stop()
     GPIO.cleanup()
+
+    
