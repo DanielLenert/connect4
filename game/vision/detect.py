@@ -1,19 +1,17 @@
 import cv2
 import numpy as np
+from picamera2 import Picamera2
 
-def detect_board(image_path):
-    img = cv2.imread(image_path)
-    if img is None:
-        print("Bild nicht gefunden!")
-        return
-
-    h, w = img.shape[:2]
-    img_small = cv2.resize(img, (w // 6, h // 6))
-    th, tw = img_small.shape[:2]
+def detect_board():
+    # Kamera initialisieren
+    picam2 = Picamera2()
+    picam2.configure(picam2.create_preview_configuration(
+        main={"format": "BGR888", "size": (640, 480)}
+    ))
+    picam2.start()
 
     cv2.namedWindow("Vier Gewinnt Erkennung")
 
-    # Rot – zwei Bereiche (unterer und oberer Hue-Bereich)
     cv2.createTrackbar("R1 Hue Min",  "Vier Gewinnt Erkennung", 0,   179, lambda x: None)
     cv2.createTrackbar("R1 Hue Max",  "Vier Gewinnt Erkennung", 10,  179, lambda x: None)
     cv2.createTrackbar("R2 Hue Min",  "Vier Gewinnt Erkennung", 160, 179, lambda x: None)
@@ -21,46 +19,43 @@ def detect_board(image_path):
     cv2.createTrackbar("R Sat Min",   "Vier Gewinnt Erkennung", 120, 255, lambda x: None)
     cv2.createTrackbar("R Val Min",   "Vier Gewinnt Erkennung", 70,  255, lambda x: None)
     cv2.createTrackbar("R Val Max",   "Vier Gewinnt Erkennung", 255, 255, lambda x: None)
-
-    # Gelb
-    cv2.createTrackbar("Y Hue Min",  "Vier Gewinnt Erkennung", 20,  179, lambda x: None)
-    cv2.createTrackbar("Y Hue Max",  "Vier Gewinnt Erkennung", 35,  179, lambda x: None)
-    cv2.createTrackbar("Y Sat Min",  "Vier Gewinnt Erkennung", 120, 255, lambda x: None)
-    cv2.createTrackbar("Y Val Min",  "Vier Gewinnt Erkennung", 70,  255, lambda x: None)
-    cv2.createTrackbar("Y Val Max",  "Vier Gewinnt Erkennung", 255, 255, lambda x: None)
-
-    # Morphologie
-    cv2.createTrackbar("Erosion",       "Vier Gewinnt Erkennung", 1,   10,  lambda x: None)
-    cv2.createTrackbar("Dilation",      "Vier Gewinnt Erkennung", 0,   10,  lambda x: None)
+    cv2.createTrackbar("Y Hue Min",   "Vier Gewinnt Erkennung", 20,  179, lambda x: None)
+    cv2.createTrackbar("Y Hue Max",   "Vier Gewinnt Erkennung", 35,  179, lambda x: None)
+    cv2.createTrackbar("Y Sat Min",   "Vier Gewinnt Erkennung", 120, 255, lambda x: None)
+    cv2.createTrackbar("Y Val Min",   "Vier Gewinnt Erkennung", 70,  255, lambda x: None)
+    cv2.createTrackbar("Y Val Max",   "Vier Gewinnt Erkennung", 255, 255, lambda x: None)
+    cv2.createTrackbar("Erosion",     "Vier Gewinnt Erkennung", 1,   10,  lambda x: None)
+    cv2.createTrackbar("Dilation",    "Vier Gewinnt Erkennung", 0,   10,  lambda x: None)
 
     while True:
+        # Frame von Kamera holen
+        frame = picam2.capture_array()
+        h, w = frame.shape[:2]
+        img_small = cv2.resize(frame, (w // 3, h // 3))
+        th, tw = img_small.shape[:2]
+
         hsv = cv2.cvtColor(img_small, cv2.COLOR_BGR2HSV)
 
-        r1_min = cv2.getTrackbarPos("R1 Hue Min", "Vier Gewinnt Erkennung")
-        r1_max = cv2.getTrackbarPos("R1 Hue Max", "Vier Gewinnt Erkennung")
-        r2_min = cv2.getTrackbarPos("R2 Hue Min", "Vier Gewinnt Erkennung")
-        r2_max = cv2.getTrackbarPos("R2 Hue Max", "Vier Gewinnt Erkennung")
-        r_sat  = cv2.getTrackbarPos("R Sat Min",  "Vier Gewinnt Erkennung")
-        r_val_min = cv2.getTrackbarPos("R Val Min","Vier Gewinnt Erkennung")
-        r_val_max = cv2.getTrackbarPos("R Val Max","Vier Gewinnt Erkennung")
-
-        g_min  = cv2.getTrackbarPos("Y Hue Min", "Vier Gewinnt Erkennung")
-        g_max  = cv2.getTrackbarPos("Y Hue Max", "Vier Gewinnt Erkennung")
-        g_sat  = cv2.getTrackbarPos("Y Sat Min", "Vier Gewinnt Erkennung")
-        g_val_min = cv2.getTrackbarPos("Y Val Min","Vier Gewinnt Erkennung")
-        g_val_max = cv2.getTrackbarPos("Y Val Max","Vier Gewinnt Erkennung")
-
+        r1_min    = cv2.getTrackbarPos("R1 Hue Min", "Vier Gewinnt Erkennung")
+        r1_max    = cv2.getTrackbarPos("R1 Hue Max", "Vier Gewinnt Erkennung")
+        r2_min    = cv2.getTrackbarPos("R2 Hue Min", "Vier Gewinnt Erkennung")
+        r2_max    = cv2.getTrackbarPos("R2 Hue Max", "Vier Gewinnt Erkennung")
+        r_sat     = cv2.getTrackbarPos("R Sat Min",  "Vier Gewinnt Erkennung")
+        r_val_min = cv2.getTrackbarPos("R Val Min",  "Vier Gewinnt Erkennung")
+        r_val_max = cv2.getTrackbarPos("R Val Max",  "Vier Gewinnt Erkennung")
+        g_min     = cv2.getTrackbarPos("Y Hue Min",  "Vier Gewinnt Erkennung")
+        g_max     = cv2.getTrackbarPos("Y Hue Max",  "Vier Gewinnt Erkennung")
+        g_sat     = cv2.getTrackbarPos("Y Sat Min",  "Vier Gewinnt Erkennung")
+        g_val_min = cv2.getTrackbarPos("Y Val Min",  "Vier Gewinnt Erkennung")
+        g_val_max = cv2.getTrackbarPos("Y Val Max",  "Vier Gewinnt Erkennung")
         erosion_val  = cv2.getTrackbarPos("Erosion",  "Vier Gewinnt Erkennung")
         dilation_val = cv2.getTrackbarPos("Dilation", "Vier Gewinnt Erkennung")
 
-        # Rot: zwei Bereiche kombinieren
         rot_maske1 = cv2.inRange(hsv, (r1_min, r_sat, r_val_min), (r1_max, 255, r_val_max))
         rot_maske2 = cv2.inRange(hsv, (r2_min, r_sat, r_val_min), (r2_max, 255, r_val_max))
         rot_maske  = cv2.bitwise_or(rot_maske1, rot_maske2)
-
         gelb_maske = cv2.inRange(hsv, (g_min, g_sat, g_val_min), (g_max, 255, g_val_max))
 
-        # Morphologie
         kernel = np.ones((5, 5), np.uint8)
         if erosion_val > 0:
             rot_maske  = cv2.erode(rot_maske,  kernel, iterations=erosion_val)
@@ -88,9 +83,10 @@ def detect_board(image_path):
 
         cv2.imshow("Vier Gewinnt Erkennung", combined)
 
-        if cv2.waitKey(100) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
+    picam2.stop()
     cv2.destroyAllWindows()
 
-detect_board("test.jpeg")
+detect_board()
