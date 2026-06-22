@@ -3,7 +3,6 @@ import numpy as np
 from picamera2 import Picamera2
 
 def detect_board():
-    # Kamera initialisieren
     picam2 = Picamera2()
     picam2.configure(picam2.create_preview_configuration(
         main={"format": "BGR888", "size": (640, 480)}
@@ -27,9 +26,15 @@ def detect_board():
     cv2.createTrackbar("Erosion",     "Vier Gewinnt Erkennung", 1,   10,  lambda x: None)
     cv2.createTrackbar("Dilation",    "Vier Gewinnt Erkennung", 0,   10,  lambda x: None)
 
+    # Neue Trackbars für die Kreiserkennung
+    cv2.createTrackbar("Min Radius",  "Vier Gewinnt Erkennung", 8,   100, lambda x: None)
+    cv2.createTrackbar("Max Radius",  "Vier Gewinnt Erkennung", 25,  100, lambda x: None)
+    cv2.createTrackbar("Min Dist",    "Vier Gewinnt Erkennung", 20,  100, lambda x: None)
+    cv2.createTrackbar("Param2",      "Vier Gewinnt Erkennung", 15,  100, lambda x: None)
+
     while True:
-        # Frame von Kamera holen
         frame = picam2.capture_array()
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         h, w = frame.shape[:2]
         img_small = cv2.resize(frame, (w // 3, h // 3))
         th, tw = img_small.shape[:2]
@@ -51,6 +56,11 @@ def detect_board():
         erosion_val  = cv2.getTrackbarPos("Erosion",  "Vier Gewinnt Erkennung")
         dilation_val = cv2.getTrackbarPos("Dilation", "Vier Gewinnt Erkennung")
 
+        min_radius = cv2.getTrackbarPos("Min Radius", "Vier Gewinnt Erkennung")
+        max_radius = cv2.getTrackbarPos("Max Radius", "Vier Gewinnt Erkennung")
+        min_dist   = cv2.getTrackbarPos("Min Dist",   "Vier Gewinnt Erkennung")
+        param2_val = cv2.getTrackbarPos("Param2",     "Vier Gewinnt Erkennung")
+
         rot_maske1 = cv2.inRange(hsv, (r1_min, r_sat, r_val_min), (r1_max, 255, r_val_max))
         rot_maske2 = cv2.inRange(hsv, (r2_min, r_sat, r_val_min), (r2_max, 255, r_val_max))
         rot_maske  = cv2.bitwise_or(rot_maske1, rot_maske2)
@@ -64,20 +74,54 @@ def detect_board():
             rot_maske  = cv2.dilate(rot_maske,  kernel, iterations=dilation_val)
             gelb_maske = cv2.dilate(gelb_maske, kernel, iterations=dilation_val)
 
+        # Kombinierte Maske (rot + gelb) für die Kreiserkennung
+        kombiniert_maske = cv2.bitwise_or(rot_maske, gelb_maske)
+        # Leicht weichzeichnen hilft HoughCircles
+        geglaettet = cv2.GaussianBlur(kombiniert_maske, (9, 9), 2)
+
+        # Sicherstellen, dass Parameter gültig sind (Param2 und minDist > 0)
+        param2_safe = max(1, param2_val)
+        min_dist_safe = max(1, min_dist)
+        max_radius_safe = max(min_radius + 1, max_radius)
+
+        kreise = cv2.HoughCircles(
+            geglaettet,
+            cv2.HOUGH_GRADIENT,
+            dp=1,
+            minDist=min_dist_safe,
+            param1=50,
+            param2=param2_safe,
+            minRadius=min_radius,
+            maxRadius=max_radius_safe
+        )
+
+        # Ausgabebild für die Kreis-Visualisierung (Kopie des Originalbilds)
+        kreis_bild = img_small.copy()
+
+        if kreise is not None:
+            kreise = np.uint16(np.around(kreise))
+            for kreis in kreise[0, :]:
+                cx, cy, r = int(kreis[0]), int(kreis[1]), int(kreis[2])
+
+                # Farbe an der Kreismitte bestimmen: rot oder gelb?
+                ist_rot  = rot_maske[cy, cx]  > 0 if 0 <= cy < th and 0 <= cx < tw else 0
+                ist_gelb = gelb_maske[cy, cx] > 0 if 0 <= cy < th and 0 <= cx < tw else 0
+
+                if ist_rot:
+                    farbe = (0, 0, 255)      # Rot in BGR
+                elif ist_gelb:
+                    farbe = (0, 255, 255)    # Gelb in BGR
+                else:
+                    farbe = (0, 255, 0)      # Grün = unklare Zuordnung
+
+                cv2.circle(kreis_bild, (cx, cy), r, farbe, 2)
+                cv2.circle(kreis_bild, (cx, cy), 2, (255, 255, 255), 3)
+
         rot_bgr  = cv2.cvtColor(rot_maske,  cv2.COLOR_GRAY2BGR)
         gelb_bgr = cv2.cvtColor(gelb_maske, cv2.COLOR_GRAY2BGR)
 
-        gui_placeholder = np.full((th, tw, 3), 60, dtype=np.uint8)
-        cv2.putText(gui_placeholder, "Rot1: unterer Hue-Bereich (0-10)",
-                    (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1)
-        cv2.putText(gui_placeholder, "Rot2: oberer Hue-Bereich (160-179)",
-                    (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1)
-        cv2.putText(gui_placeholder, "Erosion: Rauschen entfernen",
-                    (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1)
-        cv2.putText(gui_placeholder, "Dilation: Flaechen auffuellen",
-                    (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1)
-
-        oben     = np.hstack([img_small, gui_placeholder])
+        # Oben: Original links, Kreiserkennung rechts (ersetzt den Platzhalter)
+        oben     = np.hstack([img_small, kreis_bild])
         unten    = np.hstack([rot_bgr,   gelb_bgr])
         combined = np.vstack([oben, unten])
 
