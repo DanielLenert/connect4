@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import json
+import time
+from datetime import datetime
 from picamera2 import Picamera2
 
 
@@ -51,10 +53,35 @@ def digitalisiere_spielfeld(positionen, rot_maske, gelb_maske):
     return board
 
 
+def zeichne_anzeige(entzerrt, zellpositionen, board):
+    anzeige = entzerrt.copy()
+    for row_idx, zeile in enumerate(zellpositionen):
+        for col_idx, (cx, cy) in enumerate(zeile):
+            wert = board[row_idx][col_idx]
+            if wert == 1:
+                farbe = (0, 0, 255)
+            elif wert == 2:
+                farbe = (0, 255, 255)
+            else:
+                farbe = (180, 180, 180)
+            cv2.circle(anzeige, (cx, cy), 18, farbe, 2)
+    return anzeige
+
+
+def logge_spielfeld(board, log_pfad="board_log.txt"):
+    zeitstempel = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(log_pfad, "a") as f:
+        f.write(f"--- {zeitstempel} ---\n")
+        for zeile in board:
+            f.write(" ".join(str(z) for z in zeile) + "\n")
+        f.write("\n")
+    print(f"[LOG] Spielfeld geloggt um {zeitstempel}")
+
+
 def detect_board():
     picam2 = Picamera2()
     picam2.configure(picam2.create_preview_configuration(
-        main={"format": "BGR888", "size": (320, 240)}
+        main={"format": "BGR888", "size": (640, 480)}
     ))
     picam2.start()
 
@@ -72,7 +99,6 @@ def detect_board():
     ], dtype=np.float32)
     matrix = cv2.getPerspectiveTransform(pts_src, pts_dst)
 
-    # Zellpositionen einmalig berechnen, nicht jeden Frame neu
     zellpositionen = berechne_zellpositionen(ZIEL_BREITE, ZIEL_HOEHE, COLS, ROWS)
 
     cv2.namedWindow("Vier Gewinnt Erkennung")
@@ -93,6 +119,8 @@ def detect_board():
 
     frame_counter = 0
     letztes_board = None
+    letzter_log_zeitpunkt = time.time()
+    LOG_INTERVALL = 600  # Sekunden = 10 Minuten
 
     try:
         while True:
@@ -102,7 +130,6 @@ def detect_board():
             entzerrt = cv2.warpPerspective(frame, matrix, (ZIEL_BREITE, ZIEL_HOEHE))
 
             frame_counter += 1
-            # Nur jeden 2. Frame komplett verarbeiten, spart Rechenleistung
             if frame_counter % 2 != 0 and letztes_board is not None:
                 anzeige = zeichne_anzeige(entzerrt, zellpositionen, letztes_board)
                 cv2.imshow("Vier Gewinnt Erkennung", anzeige)
@@ -143,6 +170,12 @@ def detect_board():
             board = digitalisiere_spielfeld(zellpositionen, rot_maske, gelb_maske)
             letztes_board = board
 
+            # Alle 10 Minuten loggen
+            jetzt = time.time()
+            if jetzt - letzter_log_zeitpunkt >= LOG_INTERVALL:
+                logge_spielfeld(board)
+                letzter_log_zeitpunkt = jetzt
+
             anzeige = zeichne_anzeige(entzerrt, zellpositionen, board)
             cv2.imshow("Vier Gewinnt Erkennung", anzeige)
 
@@ -152,21 +185,6 @@ def detect_board():
     finally:
         picam2.stop()
         cv2.destroyAllWindows()
-
-
-def zeichne_anzeige(entzerrt, zellpositionen, board):
-    anzeige = entzerrt.copy()
-    for row_idx, zeile in enumerate(zellpositionen):
-        for col_idx, (cx, cy) in enumerate(zeile):
-            wert = board[row_idx][col_idx]
-            if wert == 1:
-                farbe = (0, 0, 255)
-            elif wert == 2:
-                farbe = (0, 255, 255)
-            else:
-                farbe = (180, 180, 180)
-            cv2.circle(anzeige, (cx, cy), 18, farbe, 2)
-    return anzeige
 
 
 if __name__ == "__main__":
