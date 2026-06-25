@@ -70,7 +70,7 @@ def minimax(board, depth, alpha, beta, maximizing):
             # Kopie des Boards simulieren
             board[row][col] = AI
             _, score = minimax(board, depth - 1, alpha, beta, False)
-            board[row][col] = EMPTY  # Zug rückgängig
+            board[row][col] = EMPTY  # Zug rueckgaengig
             if score > best[1]:
                 best = (col, score)
             alpha = max(alpha, score)
