@@ -3,6 +3,7 @@ import time
 from game.board import check_win, is_draw
 from game.ai import get_ai_move
 from vision.detect import setup_camera, draw_overlay, compute_masks, digitize_board
+from hardware.display import zeige_spieler_dran, zeige_ki_denkt, zeige_spieler_gewinnt, zeige_ki_gewinnt, clear_display
 
 
 def capture_frame(picam2, matrix):
@@ -85,24 +86,30 @@ def main():
                 print_board(board)
 
                 if check_win(board, 1):
+                    zeige_spieler_gewinnt()
                     print("🎉 Spieler gewinnt!")
                     break
+
                 if check_win(board, 2):
+                    zeige_ki_gewinnt()
                     print("KI gewinnt!")
                     break
+
                 if is_draw(board):
                     print("Unentschieden!")
                     break
 
                 if is_player_move(last_board, board):
+                    zeige_ki_denkt()
                     print("Spielerzug erkannt. KI denkt...")
                     col = get_ai_move(board, depth=5)
                     print(f"\n👉 KI würde Spalte {col + 1} spielen.")
-                    print("Lege den gelben Stein manuell in diese Spalte.\n")
+                    zeige_spieler_dran(col) 
 
                 last_board = board
 
     finally:
+        clear_display()
         picam2.stop()
         cv2.destroyAllWindows()
 
