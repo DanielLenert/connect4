@@ -4,7 +4,19 @@ from game.board import check_win, is_draw
 from game.ai import get_ai_move
 from vision.detect import setup_camera, draw_overlay, compute_masks, digitize_board
 from hardware.display import zeige_start, zeige_ki_denkt, zeige_spieler_dran, zeige_spieler_gewinnt, zeige_ki_gewinnt, clear_display
+from hardware.servos import execute_move, reset_all_servos
+import signal
+import sys
+from hardware.servos import execute_move, reset_all_servos
 
+
+def handle_exit(sig, frame):
+    print("Programm wird beendet...")
+    reset_all_servos()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_exit)   # Strg+C
+signal.signal(signal.SIGTERM, handle_exit) 
 
 def capture_frame(picam2, matrix):
     """Captures a camera frame and warps it. Returns the warped image."""
@@ -110,6 +122,7 @@ def main():
                     col = get_ai_move(board, depth=5)
                     zeige_ki_denkt(col)
                     print(f"Spielerzug erkannt. Naechster KI-Zug: Spalte {col + 1}")
+                    execute_move(col)  
 
                 elif is_ai_move(last_board, board):
                     zeige_spieler_dran()
@@ -118,6 +131,7 @@ def main():
                 last_board = board
 
     finally:
+        reset_all_servos()
         clear_display()
         picam2.stop()
         cv2.destroyAllWindows()
