@@ -3,7 +3,6 @@ import busio
 from adafruit_ssd1306 import SSD1306_I2C
 from PIL import Image, ImageDraw, ImageFont
 
-# Initialize display
 i2c = busio.I2C(board.SCL, board.SDA)
 display = SSD1306_I2C(128, 64, i2c, addr=0x3C)
 
@@ -22,25 +21,25 @@ def show_text(line1, line2=""):
 
 
 def clear_display():
-    """Clears the display – call this when the program exits."""
     display.fill(0)
     display.show()
 
 
-def zeige_spieler_dran(col=None):
-    if col is not None:
-        show_text("Du bist dran!", f"Spalte {col + 1}")
-    else:
-        show_text("Du bist dran!", "Lege einen Stein")
+def zeige_start():
+    show_text("Bitte beginnen", "mit rotem Stein.")
 
 
-def zeige_ki_denkt():
-    show_text("KI denkt...", "Bitte warten")
+def zeige_ki_denkt(col):
+    show_text("KI denkt...", f"Naechster Zug: {col + 1}")
+
+
+def zeige_spieler_dran():
+    show_text("Sie sind", "am Zug.")
 
 
 def zeige_spieler_gewinnt():
-    show_text("Glueckwunsch!", "Du hast gewonnen!")
+    show_text("Spieler gewinnt.")
 
 
 def zeige_ki_gewinnt():
-    show_text("KI gewinnt!", "Viel Glueck!")
+    show_text("Maschine gewinnt.")

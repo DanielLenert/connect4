@@ -3,7 +3,7 @@ import time
 from game.board import check_win, is_draw
 from game.ai import get_ai_move
 from vision.detect import setup_camera, draw_overlay, compute_masks, digitize_board
-from hardware.display import zeige_spieler_dran, zeige_ki_denkt, zeige_spieler_gewinnt, zeige_ki_gewinnt, clear_display
+from hardware.display import zeige_start, zeige_ki_denkt, zeige_spieler_dran, zeige_spieler_gewinnt, zeige_ki_gewinnt, clear_display
 
 
 def capture_frame(picam2, matrix):
@@ -21,6 +21,12 @@ def detect_board_from_image(warped, cell_positions):
     board = digitize_board(cell_positions, red_mask, yellow_mask)
     return board
 
+def is_ai_move(old_board, new_board):
+    for r in range(len(old_board)):
+        for c in range(len(old_board[0])):
+            if old_board[r][c] == 0 and new_board[r][c] == 2:
+                return True
+    return False
 
 def wait_for_stable_state(picam2, matrix, cell_positions, stable_frames=5, interval=0.1):
     """Continuously shows the live image AND waits until the detected board
@@ -67,14 +73,15 @@ def main():
     picam2, matrix, cell_positions = setup_camera()
     last_board = None
 
-    print("=== Vier Gewinnt – Mensch vs. KI (ohne Servo) ===")
-    print("Lege deinen ersten Stein. Das System wartet auf einen stabilen Zustand.\n")
+    zeige_start()  # Startanzeige beim Programmstart
+    print("=== Vier Gewinnt ===")
+    print("Bitte beginnen Sie mit einem roten Stein.\n")
 
     try:
         while True:
             board, warped = wait_for_stable_state(picam2, matrix, cell_positions)
 
-            if board is None:  # 'q' was pressed
+            if board is None:
                 break
 
             if last_board is None:
@@ -87,24 +94,26 @@ def main():
 
                 if check_win(board, 1):
                     zeige_spieler_gewinnt()
-                    print("🎉 Spieler gewinnt!")
+                    print("Spieler gewinnt.")
                     break
 
                 if check_win(board, 2):
                     zeige_ki_gewinnt()
-                    print("KI gewinnt!")
+                    print("Maschine gewinnt.")
                     break
 
                 if is_draw(board):
-                    print("Unentschieden!")
+                    print("Unentschieden.")
                     break
 
                 if is_player_move(last_board, board):
-                    zeige_ki_denkt()
-                    print("Spielerzug erkannt. KI denkt...")
                     col = get_ai_move(board, depth=5)
-                    print(f"\n👉 KI würde Spalte {col + 1} spielen.")
-                    zeige_spieler_dran(col) 
+                    zeige_ki_denkt(col)
+                    print(f"Spielerzug erkannt. Naechster KI-Zug: Spalte {col + 1}")
+
+                elif is_ai_move(last_board, board):
+                    zeige_spieler_dran()
+                    print("KI-Zug erkannt. Sie sind am Zug.")
 
                 last_board = board
 
