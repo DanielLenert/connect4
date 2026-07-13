@@ -30,7 +30,7 @@ def zeige_start():
 
 
 def zeige_ki_denkt(col):
-    show_text("KI denkt...", f"Naechster Zug: {col + 1}")
+    show_text("KI denkt...", f"Naechster Zug: Spalte {col + 1}")
 
 
 def zeige_spieler_dran():
