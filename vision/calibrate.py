@@ -45,6 +45,14 @@ def lade_kalibrierung():
     except Exception:
         return None
 
+def lade_farben():
+    try:
+        with open("/home/lenert-da/bclr/connect4/hsv_params.json", "r") as f:
+            geladen = json.load(f)
+            hsv_params.update(geladen)
+        print("Farbwerte geladen.")
+    except Exception:
+        print("Keine gespeicherten Farbwerte gefunden – Standardwerte werden verwendet.")
 
 def berechne_matrix(punkte):
     pts_src = punkte
@@ -90,6 +98,8 @@ def lese_trackbars(fenster):
 
 def main():
     global MODUS
+
+    lade_farben()
 
     picam2 = Picamera2()
     picam2.configure(picam2.create_preview_configuration(

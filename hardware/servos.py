@@ -58,7 +58,7 @@ def stop_fs90r():
 def _run_release_servo():
     """Runs FS90R counter-clockwise for one stone release."""
     _set_fs90r(1.0)
-    time.sleep(0.275)
+    time.sleep(0.25)
     stop_fs90r()
 
 

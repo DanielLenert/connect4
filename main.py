@@ -7,8 +7,21 @@ from hardware.display import zeige_start, zeige_ki_denkt, zeige_spieler_dran, ze
 from hardware.servos import execute_move, reset_all_servos
 import signal
 import sys
-from hardware.servos import execute_move, reset_all_servos
+import RPi.GPIO as GPIO
 
+SHUTDOWN_PIN = 17
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(SHUTDOWN_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+def check_shutdown_button():
+    if GPIO.input(SHUTDOWN_PIN) == GPIO.LOW:
+        print("Shutdown-Button gedrückt...")
+        zeige_text("Wird", "beendet...")
+        reset_all_servos()
+        clear_display()
+        import os
+        os.system("sudo shutdown -h now")
 
 def handle_exit(sig, frame):
     print("\nProgramm wird beendet...")
@@ -49,6 +62,7 @@ def wait_for_stable_state(picam2, matrix, cell_positions, stable_frames=10, inte
     counter = 0
 
     while True:
+        check_shutdown_button()  # bei jedem Frame prüfen
         warped = capture_frame(picam2, matrix)
         board = detect_board_from_image(warped, cell_positions)
 
