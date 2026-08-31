@@ -11,12 +11,14 @@ from hardware.servos import execute_move, reset_all_servos
 
 
 def handle_exit(sig, frame):
-    print("Programm wird beendet...")
+    print("\nProgramm wird beendet...")
     reset_all_servos()
+    picam2.stop()
+    cv2.destroyAllWindows()
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_exit)   # Strg+C
-signal.signal(signal.SIGTERM, handle_exit) 
+signal.signal(signal.SIGTERM, handle_exit)  # systemd stop 
 
 def capture_frame(picam2, matrix):
     """Captures a camera frame and warps it. Returns the warped image."""
@@ -40,7 +42,7 @@ def is_ai_move(old_board, new_board):
                 return True
     return False
 
-def wait_for_stable_state(picam2, matrix, cell_positions, stable_frames=5, interval=0.1):
+def wait_for_stable_state(picam2, matrix, cell_positions, stable_frames=10, interval=0.15):
     """Continuously shows the live image AND waits until the detected board
     stays unchanged for several frames in a row. Returns (board, warped)."""
     last_board = None

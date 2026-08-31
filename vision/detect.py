@@ -7,16 +7,22 @@ TARGET_WIDTH = 700
 TARGET_HEIGHT = 600
 COLS, ROWS = 7, 6
 
-# Calibrated HSV values – enter your actual tested values here
-HSV_PARAMS = {
-    "r1_min": 0,   "r1_max": 10,
-    "r2_min": 160, "r2_max": 179,
-    "r_sat": 120,  "r_val_min": 70,  "r_val_max": 255,
-    "g_min": 20,   "g_max": 35,
-    "g_sat": 120,  "g_val_min": 70,  "g_val_max": 255,
-    "erosion": 1,  "dilation": 0,
-}
+def load_hsv_params(path="/home/lenert-da/bclr/connect4/hsv_params.json"):
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception:
+        print("hsv_params.json nicht gefunden – Standardwerte werden verwendet.")
+        return {
+            "r1_min": 0,   "r1_max": 10,
+            "r2_min": 160, "r2_max": 179,
+            "r_sat": 120,  "r_val_min": 70,  "r_val_max": 255,
+            "g_min": 20,   "g_max": 35,
+            "g_sat": 120,  "g_val_min": 70,  "g_val_max": 255,
+            "erosion": 1,  "dilation": 0,
+        }
 
+HSV_PARAMS = load_hsv_params()
 
 def load_calibration(path="calibration.json"):
     with open(path, "r") as f:
